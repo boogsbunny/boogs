@@ -1,9 +1,8 @@
-(define-module (boogs)
+(define-module (boogs packages)
   #:use-module (guix packages)
   #:use-module ((guix licenses) #:select (gpl3+))
   #:use-module (gnu packages gcc)
-  #:use-module (srfi srfi-1)
-  #:use-module (guix channels))
+  #:use-module (srfi srfi-1))
 
 (define-public gcc-unhidden
   (package
