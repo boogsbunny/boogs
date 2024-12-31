@@ -47,4 +47,37 @@ of extra glyphs from popular 'iconic fonts' such as Font Awesome,
 Devicons, Octicons, and others.")
       (license silofl1.1))))
 
-font-0xproto-nerd-font
+(define-public font-iosevka-term-nerd-font
+  (let ((version "v3.3.0"))
+    (package
+      (name "font-iosevka-term-nerd-font")
+      (version version)
+      (source
+       (origin
+         (method url-fetch)
+         (uri
+          (string-append
+           "https://github.com/ryanoasis/nerd-fonts/releases/download/"
+           version
+           "/IosevkaTerm.tar.xz"))
+         (sha256
+          (base32
+           "02xpmzwl38cz6l4jzf5wk41kv8f6i7ffg1wzpj7hk86j3qys98jw"))))
+      (build-system font-build-system)
+      (arguments
+       `(#:phases
+         (modify-phases %standard-phases
+           (add-before 'install 'make-files-writable
+             (lambda _
+               (for-each
+                make-file-writable
+                (find-files "." ".*\\.(otf|otc|ttf|ttc)$"))
+               #t)))))
+      (home-page "https://www.nerdfonts.com/")
+      (synopsis "Iconic font aggregator, collection, and patcher")
+      (description
+       "Nerd Fonts is a project that patches developer targeted fonts
+with a high number of glyphs (icons). Specifically to add a high number
+of extra glyphs from popular 'iconic fonts' such as Font Awesome,
+Devicons, Octicons, and others.")
+      (license silofl1.1))))
