@@ -2,7 +2,7 @@
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix build-system font)
-  #:use-module (nonguix licenses)
+  #:use-module (guix licenses)
   #:use-module (gnu packages gcc)
   #:use-module (srfi srfi-1))
 
@@ -45,4 +45,6 @@
 with a high number of glyphs (icons). Specifically to add a high number
 of extra glyphs from popular 'iconic fonts' such as Font Awesome,
 Devicons, Octicons, and others.")
-      (license license:silofl1.1))))
+      (license silofl1.1))))
+
+font-0xproto-nerd-font
