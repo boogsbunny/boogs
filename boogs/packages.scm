@@ -560,6 +560,10 @@ Devicons, Octicons, and others.")
     (build-system gnu-build-system)
     (arguments
      `(#:tests? #f
+       #:configure-flags
+       (list (string-append "PG_CONFIG="
+                            (assoc-ref %build-inputs "postgresql")
+                            "/bin/pg_config"))
        #:make-flags
        (list (string-append "datadir=" (assoc-ref %outputs "out") "/share")
              (string-append "docdir="(assoc-ref %outputs "out") "/share/doc")
@@ -571,7 +575,13 @@ Devicons, Octicons, and others.")
            (lambda* (#:key outputs #:allow-other-keys)
              (substitute* '("raster/loader/Makefile" "raster/scripts/python/Makefile")
                (("\\$\\(DESTDIR\\)\\$\\(PGSQL_BINDIR\\)")
-                (string-append (assoc-ref outputs "out") "/bin"))))))))
+                (string-append (assoc-ref outputs "out") "/bin"))))))
+       (add-before 'install 'fix-extension-upgrades-path
+         (lambda* (#:key outputs #:allow-other-keys)
+           (substitute* "loader/postgis.pl"
+             (("\\$pg_sharedir/extension")
+              (string-append (assoc-ref outputs "out") "/share/postgresql/extension")))
+           #t))))
     (inputs
      (list gdal
            geos
