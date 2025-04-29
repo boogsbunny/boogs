@@ -575,13 +575,13 @@ Devicons, Octicons, and others.")
            (lambda* (#:key outputs #:allow-other-keys)
              (substitute* '("raster/loader/Makefile" "raster/scripts/python/Makefile")
                (("\\$\\(DESTDIR\\)\\$\\(PGSQL_BINDIR\\)")
-                (string-append (assoc-ref outputs "out") "/bin"))))))
-       (add-before 'install 'fix-extension-upgrades-path
-         (lambda* (#:key outputs #:allow-other-keys)
-           (substitute* "loader/postgis.pl"
-             (("\\$pg_sharedir/extension")
-              (string-append (assoc-ref outputs "out") "/share/postgresql/extension")))
-           #t))))
+                (string-append (assoc-ref outputs "out") "/bin")))))
+         (add-before 'install 'fix-extension-upgrades-path
+           (lambda* (#:key outputs #:allow-other-keys)
+             (substitute* "loader/postgis.pl"
+               (("\\$pg_sharedir/extension")
+                (string-append (assoc-ref outputs "out") "/share/postgresql/extension")))
+             #t)))))
     (inputs
      (list gdal
            geos
