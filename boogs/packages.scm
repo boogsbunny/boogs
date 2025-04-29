@@ -34,7 +34,7 @@
   #:use-module (guix packages)
   #:use-module (guix utils)
   ;; #:use-module (nonguix build-system binary)
-  #:use-module ((nonguix licenses) :prefix license:)
+  ;; #:use-module ((nonguix licenses) :prefix license:)
   #:use-module (srfi srfi-1))
 
 (define-public gcc-unhidden
