@@ -1,7 +1,8 @@
 (define-module (boogs packages)
-  #:use-module (guix packages)
   #:use-module (gnu packages base)
+  #:use-module (gnu packages bash)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages cups)
   #:use-module (gnu packages fontutils)
   #:use-module (gnu packages gl)
   #:use-module (gnu packages glib)
@@ -10,19 +11,30 @@
   #:use-module (gnu packages gtk)
   #:use-module (gnu packages haskell-xyz)
   #:use-module (gnu packages image)
+  #:use-module (gnu packages kerberos)
+  #:use-module (gnu packages linux)
   #:use-module (gnu packages ncurses)
-  #:use-module (gnu packages textutils)
+  #:use-module (gnu packages nss)
   #:use-module (gnu packages pkg-config)
+  #:use-module (gnu packages pulseaudio)
+  #:use-module (gnu packages qt)
+  #:use-module (gnu packages textutils)
   #:use-module (gnu packages vulkan)
+  #:use-module (gnu packages xdisorg)
   #:use-module (gnu packages xml)
   #:use-module (gnu packages xorg)
   #:use-module (guix build-system font)
+  #:use-module (guix build-system gnu)
   #:use-module (guix build-system zig)
+  #:use-module (guix channels)
   #:use-module (guix download)
   #:use-module (guix gexp)
   #:use-module (guix git-download)
   #:use-module ((guix licenses) #:prefix license:)
+  #:use-module (guix packages)
   #:use-module (guix utils)
+  #:use-module (nonguix build-system binary)
+  #:use-module ((nonguix licenses) :prefix license:)
   #:use-module (srfi srfi-1))
 
 (define-public gcc-unhidden
@@ -526,3 +538,354 @@ Devicons, Octicons, and others.")
   terminal emulators available, they all force you to choose between
   speed, features, or native UIs. Ghostty provides all three.")
       (license license:expat))))
+
+(define-public postgis
+  (package
+    (name "postgis")
+    (version "3.5.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://download.osgeo.org/postgis/source/postgis-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "06kr9yqwjy6lghcnqj2dhr0sq1chp6ipcg27jsigdbisdvarb7zv"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f
+       #:make-flags
+       (list (string-append "datadir=" (assoc-ref %outputs "out") "/share")
+             (string-append "docdir="(assoc-ref %outputs "out") "/share/doc")
+             (string-append "pkglibdir="(assoc-ref %outputs "out") "/lib")
+             (string-append "bindir=" (assoc-ref %outputs "out") "/bin"))
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-install-path
+           (lambda* (#:key outputs #:allow-other-keys)
+             (substitute* '("raster/loader/Makefile" "raster/scripts/python/Makefile")
+               (("\\$\\(DESTDIR\\)\\$\\(PGSQL_BINDIR\\)")
+                (string-append (assoc-ref outputs "out") "/bin"))))))))
+    (inputs
+     (list gdal
+           geos
+           giflib
+           json-c
+           libjpeg-turbo
+           libxml2
+           openssl
+           pcre
+           postgresql
+           protobuf-c
+           proj))
+    (native-inputs
+     (list perl pkg-config))
+    (home-page "https://postgis.net")
+    (synopsis "Spatial database extender for PostgreSQL")
+    (description "PostGIS is a spatial database extender for PostgreSQL
+object-relational database.  It adds support for geographic objects allowing
+location queries to be run in SQL.  This package provides a PostgreSQL
+extension.")
+    (license (list
+               ;; General license
+               license:gpl2+
+               ;; loader/dbfopen, safileio.*, shapefil.h, shpopen.c
+               license:expat
+               ;; loader/getopt.*
+               license:public-domain
+               ;; doc/xsl
+               license:bsd-3 ; files only say "BSD"
+               ;; doc
+               license:cc-by-sa3.0))))
+
+(define-public zoom
+  (package
+    (name "zoom")
+    (version "6.2.11.5069")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://cdn.zoom.us/prod/" version "/zoom_x86_64.tar.xz"))
+       (file-name (string-append name "-" version "-x86_64.tar.xz"))
+       (sha256
+        (base32 "09l9jfmld1dlinkgdgf8ra549rw1hwis3b5cly49a2gvz1sfr8lc"))))
+    (supported-systems '("x86_64-linux"))
+    (build-system binary-build-system)
+    (arguments
+     (list #:validate-runpath? #f ; TODO: fails on wrapped binary and included other files
+           #:patchelf-plan
+           ;; Note: it seems like some (all?) of these only do anything in
+           ;; LD_LIBRARY_PATH, or at least needed there as well.
+           #~(let ((libs '("alsa-lib"
+                           "at-spi2-atk"
+                           "at-spi2-core"
+                           "atk"
+                           "cairo"
+                           "cups"
+                           "dbus"
+                           "eudev"
+                           "expat"
+                           "fontconfig-minimal"
+                           "gcc"
+                           "glib"
+                           "gtk+"
+                           "libdrm"
+                           "libx11"
+                           "libxcb"
+                           "libxcomposite"
+                           "libxcursor"
+                           "libxdamage"
+                           "libxext"
+                           "libxfixes"
+                           "libxkbcommon"
+                           "libxkbfile"
+                           "libxrandr"
+                           "libxshmfence"
+                           ;; "libxi"
+                           ;; "libxtst"
+                           ;; "libxinerama"
+                           ;; "libxscrnsaver"
+                           "libxtst"
+                           "mesa"
+                           "nspr"
+                           "pango"
+                           "pulseaudio"
+                           "qtbase"
+                           "qtsvg"
+                           "xcb-util-image"
+                           "xcb-util-keysyms"
+                           "zlib")))
+               `(("lib/zoom/ZoomLauncher"
+                 ,libs)
+                ("lib/zoom/zoom"
+                 ,libs)
+                ("lib/zoom/zopen"
+                 ,libs)
+                ("lib/zoom/aomhost"
+                 ,libs)))
+           #:phases
+           #~(modify-phases %standard-phases
+               (replace 'unpack
+                 (lambda* (#:key source #:allow-other-keys)
+                   (invoke "tar" "xvf" source)
+                   ;; Use the more standard lib directory for everything.
+                   (mkdir-p "lib")
+                   (rename-file "zoom/" "lib/zoom")))
+               (add-after 'install 'wrap-where-patchelf-does-not-work
+                 (lambda _
+                   (wrap-program (string-append #$output "/lib/zoom/zopen")
+                     `("LD_LIBRARY_PATH" prefix
+                       ,(list #$@(map (lambda (pkg)
+                                        (file-append (this-package-input pkg) "/lib"))
+                                      '("fontconfig-minimal"
+                                        "freetype"
+                                        "gcc"
+                                        "glib"
+                                        "libxcomposite"
+                                        "libxdamage"
+                                        "libxkbcommon"
+                                        "libxkbfile"
+                                        "libxrandr"
+                                        "libxrender"
+                                        "zlib")))))
+                   (wrap-program (string-append #$output "/lib/zoom/zoom")
+                     '("QML2_IMPORT_PATH" = ())
+                     `("QT_PLUGIN_PATH" prefix
+                       (,(string-append #$(this-package-input "qtsvg") "/lib/qt5/plugins")))
+                     ;; '("QT_PLUGIN_PATH" = ())
+                     '("QT_SCREEN_SCALE_FACTORS" = ())
+                     '("QT_QPA_PLATFORM" = ("xcb"))
+                     `("PULSE_SERVER" = ("unix:/run/user/${UID}/pulse/native"))
+                     `("PULSE_COOKIE" = ("${XDG_RUNTIME_DIR}/pulse/cookie"))
+                     ;; `("DISPLAY" = (":0"))
+                     `("XAUTHORITY" = ("${HOME}/.Xauthority"))
+                     `("FONTCONFIG_PATH" ":" prefix
+                       (,(string-join
+                          (list
+                           (string-append #$(this-package-input "fontconfig-minimal") "/etc/fonts")
+                           #$output)
+                          ":")))
+                     `("LD_LIBRARY_PATH" prefix
+                       ,(list (string-append #$(this-package-input "nss") "/lib/nss")
+                              (string-append #$(this-package-input "qtbase") "/lib")
+                              (string-append #$output "/lib/zoom/Qt/lib")
+                              #$@(map (lambda (pkg)
+                                        (file-append (this-package-input pkg) "/lib"))
+                                      ;; TODO: Reuse this long list as it is
+                                      ;; needed for aomhost.  Or perhaps
+                                      ;; aomhost has a shorter needed list,
+                                      ;; but untested.
+                                      '("alsa-lib"
+                                        "atk"
+                                        "at-spi2-atk"
+                                        "at-spi2-core"
+                                        "cairo"
+                                        "cups"
+                                        "dbus"
+                                        "eudev"
+                                        "expat"
+                                        "gcc"
+                                        "glib"
+                                        "mesa"
+                                        "mit-krb5"
+                                        "nspr"
+                                        "libxcb"
+                                        "libxcomposite"
+                                        "libxdamage"
+                                        "libxext"
+                                        "libxkbcommon"
+                                        "libxkbfile"
+                                        "libxrandr"
+                                        "libxshmfence"
+                                        ;; "libxi"
+                                        ;; "libxtst"
+                                        ;; "libxinerama"
+                                        ;; "libxscrnsaver"
+                                        "pango"
+                                        "pulseaudio"
+                                        "qtbase"
+                                        "qtsvg"
+                                        "xcb-util"
+                                        "xcb-util-image"
+                                        "xcb-util-keysyms"
+                                        "xcb-util-wm"
+                                        "xcb-util-renderutil"
+                                        "zlib")))))
+                   (wrap-program (string-append #$output "/lib/zoom/aomhost")
+                     `("FONTCONFIG_PATH" ":" prefix
+                       (,(string-join
+                          (list
+                           (string-append #$(this-package-input "fontconfig-minimal") "/etc/fonts")
+                           #$output)
+                          ":")))
+                     `("LD_LIBRARY_PATH" prefix
+                       ,(list (string-append #$(this-package-input "nss") "/lib/nss")
+                              #$@(map (lambda (pkg)
+                                        (file-append (this-package-input pkg) "/lib"))
+                                      '("alsa-lib"
+                                        "atk"
+                                        "at-spi2-atk"
+                                        "at-spi2-core"
+                                        "cairo"
+                                        "cups"
+                                        "dbus"
+                                        "eudev"
+                                        "expat"
+                                        "gcc"
+                                        "glib"
+                                        "mesa"
+                                        "mit-krb5"
+                                        "nspr"
+                                        "libxcb"
+                                        "libxcomposite"
+                                        "libxdamage"
+                                        "libxext"
+                                        "libxkbcommon"
+                                        "libxkbfile"
+                                        "libxrandr"
+                                        "libxshmfence"
+                                        "pango"
+                                        "pulseaudio"
+                                        "qtbase"
+                                        "qtsvg"
+                                        "xcb-util"
+                                        "xcb-util-image"
+                                        "xcb-util-keysyms"
+                                        "xcb-util-wm"
+                                        "xcb-util-renderutil"
+                                        "zlib")))))))
+               (add-after 'wrap-where-patchelf-does-not-work 'rename-binary
+                 ;; IPC (for single sign-on and handling links) fails if the
+                 ;; name does not end in "zoom," so rename the real binary.
+                 ;; Thanks to the Nix packagers for figuring this out.
+                 (lambda _
+                   (rename-file (string-append #$output "/lib/zoom/.zoom-real")
+                                (string-append #$output "/lib/zoom/.zoom"))
+                   (substitute* (string-append #$output "/lib/zoom/zoom")
+                     (("zoom-real")
+                      "zoom"))))
+               (add-after 'rename-binary 'symlink-binaries
+                 (lambda _
+                   (delete-file (string-append #$output "/environment-variables"))
+                   (mkdir-p (string-append #$output "/bin"))
+                   (symlink (string-append #$output "/lib/zoom/aomhost")
+                            (string-append #$output "/bin/aomhost"))
+                   (symlink (string-append #$output "/lib/zoom/zoom")
+                            (string-append #$output "/bin/zoom"))
+                   (symlink (string-append #$output "/lib/zoom/zopen")
+                            (string-append #$output "/bin/zopen"))
+                   (symlink (string-append #$output "/lib/zoom/ZoomLauncher")
+                            (string-append #$output "/bin/ZoomLauncher"))))
+               (add-after 'symlink-binaries 'create-desktop-file
+                 (lambda _
+                   (let ((apps (string-append #$output "/share/applications")))
+                     (mkdir-p apps)
+                     (make-desktop-entry-file
+                      (string-append apps "/zoom.desktop")
+                      #:name "Zoom"
+                      #:generic-name "Zoom Client for Linux"
+                      #:exec (string-append #$output "/bin/ZoomLauncher %U")
+                      #:mime-type (list
+                                   "x-scheme-handler/zoommtg"
+                                   "x-scheme-handler/zoomus"
+                                   "x-scheme-handler/tel"
+                                   "x-scheme-handler/callto"
+                                   "x-scheme-handler/zoomphonecall"
+                                   "application/x-zoom")
+                      #:categories '("Network" "InstantMessaging"
+                                     "VideoConference" "Telephony")
+                      #:startup-w-m-class "zoom"
+                      #:comment
+                      '(("en" "Zoom Video Conference")
+                        (#f "Zoom Video Conference")))))))))
+    (native-inputs (list tar))
+    (inputs (list alsa-lib
+                  at-spi2-atk
+                  at-spi2-core
+                  atk
+                  bash-minimal
+                  cairo
+                  cups
+                  dbus
+                  eudev
+                  expat
+                  fontconfig
+                  freetype
+                  `(,gcc "lib")
+                  glib
+                  gtk+
+                  libdrm
+                  librsvg
+                  libx11
+                  libxcb
+                  libxcomposite
+                  libxdamage
+                  libxext
+                  libxfixes
+                  libxkbcommon
+                  libxkbfile
+                  libxrandr
+                  libxrender
+                  libxshmfence
+                  ;; libxi
+                  ;; libxtst
+                  ;; libxinerama
+                  ;; libxscrnsaver
+                  mesa
+                  mit-krb5
+                  nspr
+                  nss
+                  pango
+                  pulseaudio
+                  qtbase
+                  qtsvg
+                  xcb-util
+                  xcb-util-image
+                  xcb-util-keysyms
+                  xcb-util-renderutil
+                  xcb-util-wm
+                  zlib))
+    (home-page "https://zoom.us/")
+    (synopsis "Video conference client")
+    (description "The Zoom video conferencing and messaging client.  Zoom must be run via an
+app launcher to use its .desktop file, or with @code{ZoomLauncher}.")
+    (license (license:nonfree "https://explore.zoom.us/en/terms/"))))
