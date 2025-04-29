@@ -549,14 +549,14 @@ Devicons, Octicons, and others.")
 (define-public postgis
   (package
     (name "postgis")
-    (version "3.5.2")
+    (version "3.4.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://download.osgeo.org/postgis/source/postgis-"
                                   version ".tar.gz"))
               (sha256
                (base32
-                "06kr9yqwjy6lghcnqj2dhr0sq1chp6ipcg27jsigdbisdvarb7zv"))))
+                "17dgk2bqjpg03jfqazv0hr0la97kax36q2dkci0kakc8dh5bdsdf"))))
     (build-system gnu-build-system)
     (arguments
      `(#:tests? #f
